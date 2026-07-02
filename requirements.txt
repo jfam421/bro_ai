@@ -1,0 +1,13 @@
+ollama
+psutil
+pywin32
+winshell
+rapidfuzz
+pyautogui
+pygetwindow
+pyperclip
+keyboard
+mouse
+watchdog
+python-dotenv
+rich
