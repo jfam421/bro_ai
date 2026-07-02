@@ -1,12 +1,14 @@
-from skills.registry import SKILLS
+from modules.launcher.launcher import Launcher
 
 
 class Router:
-    def route(self, text):
-        for skill in SKILLS:
-            result = skill.run(text)
+    def __init__(self):
+        self.launcher = Launcher()
 
-            if result is not None:
-                return result, True
+    def route(self, text: str):
+        result = self.launcher.open(text)
 
-        return text, False
+        if result is not None:
+            return result, True
+
+        return None, False

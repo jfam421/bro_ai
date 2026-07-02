@@ -1,19 +1,8 @@
+from pathlib import Path
+
 import ollama
 
 from core.database import Database
-
-
-SYSTEM_PROMPT = """
-Ты локальный ИИ-помощник по имени Бро.
-
-Правила:
-
-- Всегда отвечай на русском языке.
-- Будь кратким.
-- Если пользователь обращается "брат", "бро", "братан" — отвечай дружелюбно.
-- Не упоминай, что ты языковая модель.
-- Если не знаешь ответ — честно скажи об этом.
-"""
 
 
 class AI:
@@ -21,15 +10,37 @@ class AI:
         self.model = model
         self.db = Database()
 
-    def ask(self, message: str) -> str:
-        self.db.add("user", message)
+        self.system_prompt = Path(
+            "prompts/system.txt"
+        ).read_text(
+            encoding="utf-8"
+        )
 
-        history = [
-            {"role": "system", "content": SYSTEM_PROMPT}
+    def ask(self, message: str) -> str:
+        self.db.add_message("user", message)
+
+        messages = [
+            {
+                "role": "system",
+                "content": self.system_prompt
+            }
         ]
 
-        for role, text in self.db.last():
-            history.append(
+        facts = self.db.get_all_facts()
+
+        if facts:
+            messages.append(
+                {
+                    "role": "system",
+                    "content": "Факты о пользователе:\n"
+                    + "\n".join(
+                        f"{k}: {v}" for k, v in facts.items()
+                    )
+                }
+            )
+
+        for role, text in self.db.get_history():
+            messages.append(
                 {
                     "role": role,
                     "content": text
@@ -38,11 +49,14 @@ class AI:
 
         response = ollama.chat(
             model=self.model,
-            messages=history
+            messages=messages
         )
 
         answer = response["message"]["content"]
 
-        self.db.add("assistant", answer)
+        self.db.add_message(
+            "assistant",
+            answer
+        )
 
         return answer
