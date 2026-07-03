@@ -13,9 +13,19 @@ logs/
 
 # Secrets
 .env
+.venv/
 
 # Windows
 Thumbs.db
 
 # ZIP files
 *.zip
+
+
+logs/
+*.log
+
+data/bro.db
+
+.vscode/
+.idea/

@@ -3,7 +3,7 @@ from core.assistant import Assistant
 
 def main():
     print("=" * 50)
-    print("БРО v0.4")
+    print("БРО v0.5")
     print("Пиши 'выход' для завершения.")
     print("=" * 50)
 

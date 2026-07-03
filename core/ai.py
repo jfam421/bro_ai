@@ -132,13 +132,10 @@ class AI:
 
         try:
             data = json.loads(raw)
-
-            answer = data.get("answer", "")
-            memory = data.get("memory", [])
+            answer = data.get("answer", raw)
 
         except Exception:
             answer = raw
-            memory = []
 
         self.db.add_message(
             "assistant",
@@ -146,6 +143,5 @@ class AI:
         )
 
         return {
-            "answer": answer,
-            "memory": memory
+            "answer": answer
         }

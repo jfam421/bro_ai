@@ -4,9 +4,9 @@ from pathlib import Path
 
 class Database:
     def __init__(self):
-        Path("database").mkdir(exist_ok=True)
+        Path("data").mkdir(exist_ok=True)
 
-        self.conn = sqlite3.connect("database/bro.db")
+        self.conn = sqlite3.connect("data/bro.db")
         self.cursor = self.conn.cursor()
 
         # История
