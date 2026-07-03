@@ -9,6 +9,7 @@ class Database:
         self.conn = sqlite3.connect("database/bro.db")
         self.cursor = self.conn.cursor()
 
+        # История
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,6 +19,7 @@ class Database:
             )
         """)
 
+        # Старые факты (пока оставляем)
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS facts (
                 key TEXT PRIMARY KEY,
@@ -25,9 +27,20 @@ class Database:
             )
         """)
 
+        # Новая долговременная память
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS memory (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                fact TEXT NOT NULL UNIQUE,
+                created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         self.conn.commit()
 
-    # ---------- История ----------
+    # ==========================================================
+    # История
+    # ==========================================================
 
     def add_message(self, role: str, message: str):
         self.cursor.execute(
@@ -49,7 +62,9 @@ class Database:
 
         return list(reversed(self.cursor.fetchall()))
 
-    # ---------- Факты ----------
+    # ==========================================================
+    # Старые факты (совместимость)
+    # ==========================================================
 
     def set_fact(self, key: str, value: str):
         self.cursor.execute(
@@ -70,10 +85,7 @@ class Database:
 
         row = self.cursor.fetchone()
 
-        if row:
-            return row[0]
-
-        return None
+        return row[0] if row else None
 
     def get_all_facts(self):
         self.cursor.execute(
@@ -81,3 +93,36 @@ class Database:
         )
 
         return dict(self.cursor.fetchall())
+
+    # ==========================================================
+    # Новая память
+    # ==========================================================
+
+    def add_memory(self, fact: str):
+        self.cursor.execute(
+            """
+            INSERT OR IGNORE INTO memory(fact)
+            VALUES(?)
+            """,
+            (fact,)
+        )
+
+        self.conn.commit()
+
+    def get_memory(self):
+        self.cursor.execute(
+            """
+            SELECT fact
+            FROM memory
+            ORDER BY id
+            """
+        )
+
+        return [row[0] for row in self.cursor.fetchall()]
+
+    def clear_memory(self):
+        self.cursor.execute(
+            "DELETE FROM memory"
+        )
+
+        self.conn.commit()

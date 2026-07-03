@@ -12,23 +12,26 @@ def main():
     while True:
         try:
             user = input("\nТы: ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\n\nБро: До встречи!")
-            break
 
-        if not user:
-            continue
+            if not user:
+                continue
 
-        if user.lower() == "выход":
-            print("Бро: До встречи!")
-            break
+            if user.lower() == "выход":
+                print("Бро: До встречи!")
+                break
 
-        try:
+
             answer = assistant.process(user)
+
             print(f"\nБро: {answer}")
 
-        except Exception as e:
-            print(f"\nОшибка: {e}")
+        except (EOFError, KeyboardInterrupt):
+            print("\nБро: До встречи!")
+            break
+
+        except Exception:
+            import traceback
+            traceback.print_exc()
 
 
 if __name__ == "__main__":

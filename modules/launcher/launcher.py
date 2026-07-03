@@ -3,45 +3,73 @@ import subprocess
 import webbrowser
 from pathlib import Path
 
+from modules.launcher.indexer import Indexer
+
 
 PROGRAMS = {
-    "блокнот": "notepad",
-    "калькулятор": "calc",
-    "проводник": "explorer",
-    "paint": "mspaint",
-    "диспетчер задач": "taskmgr",
-    "командная строка": "cmd",
-    "powershell": "powershell",
-    "vs code": "code",
-    "vscode": "code",
+    "блокнот": "notepad.exe",
+    "калькулятор": "calc.exe",
+    "проводник": "explorer.exe",
+    "paint": "mspaint.exe",
+    "диспетчер задач": "taskmgr.exe",
 }
 
 
 class Launcher:
+    def __init__(self):
+        self.indexer = Indexer()
+        self.indexer.scan()
 
     def open(self, text: str):
-        text = text.lower().strip()
+        original = text.strip()
+        text = original.lower().strip()
 
-        # ---------- программы ----------
-        for name, command in PROGRAMS.items():
-            if name in text:
-                subprocess.Popen(command)
-                return f"Открываю {name}."
+        prefixes = (
+            "открой ",
+            "запусти ",
+            "включи ",
+        )
 
-        # ---------- сайты ----------
-        if text.startswith("https://") or text.startswith("http://"):
-            webbrowser.open(text)
+        for prefix in prefixes:
+            if text.startswith(prefix):
+                text = text[len(prefix):].strip()
+                break
+
+        # Встроенные программы
+        if text in PROGRAMS:
+            try:
+                subprocess.Popen([PROGRAMS[text]])
+                return f"Открываю {text}."
+            except Exception as e:
+                return f"Ошибка: {e}"
+
+        # Программы из меню Пуск
+        program = self.indexer.search(text)
+
+        if program:
+            try:
+                os.startfile(program)
+                return f"Открываю {program.stem}."
+            except Exception as e:
+                return f"Ошибка: {e}"
+
+        # Сайт
+        if original.startswith(("http://", "https://")):
+            webbrowser.open(original)
             return "Открываю сайт."
 
-        if text.startswith("www."):
-            webbrowser.open(f"https://{text}")
+        if original.startswith("www."):
+            webbrowser.open("https://" + original)
             return "Открываю сайт."
 
-        # ---------- файл или папка ----------
-        path = Path(text)
+        # Файл или папка
+        path = Path(original)
 
         if path.exists():
-            os.startfile(path)
-            return f"Открываю {path.name}."
+            try:
+                os.startfile(path)
+                return f"Открываю {path.name}."
+            except Exception as e:
+                return f"Ошибка: {e}"
 
         return None

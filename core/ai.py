@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import ollama
 
@@ -16,7 +17,7 @@ class AI:
             encoding="utf-8"
         )
 
-    def ask(self, message: str) -> str:
+    def ask(self, message: str) -> dict:
         self.db.add_message("user", message)
 
         messages = [
@@ -26,16 +27,18 @@ class AI:
             }
         ]
 
-        facts = self.db.get_all_facts()
+        memories = self.db.get_memory()
 
-        if facts:
+        if memories:
             messages.append(
                 {
                     "role": "system",
-                    "content": "Факты о пользователе:\n"
-                    + "\n".join(
-                        f"{k}: {v}" for k, v in facts.items()
-                    )
+                    "content":
+                        "Долговременная память:\n"
+                        + "\n".join(
+                            f"- {fact}"
+                            for fact in memories
+                        )
                 }
             )
 
@@ -52,11 +55,24 @@ class AI:
             messages=messages
         )
 
-        answer = response["message"]["content"]
+        raw = response["message"]["content"]
+
+        try:
+            data = json.loads(raw)
+
+            answer = data.get("answer", "")
+            memory = data.get("memory", [])
+
+        except Exception:
+            answer = raw
+            memory = []
 
         self.db.add_message(
             "assistant",
             answer
         )
 
-        return answer
+        return {
+            "answer": answer,
+            "memory": memory
+        }

@@ -13,27 +13,19 @@ class Engine:
     def process(self, text: str) -> str:
         logger.info(f"USER: {text}")
 
-        # Запоминаем новые факты
-        if self.memory.process(text):
-            answer = "Запомнил."
-            logger.info(f"BRO: {answer}")
-            return answer
-
-        # Отвечаем из памяти
-        answer = self.memory.answer(text)
-        if answer:
-            logger.info(f"BRO: {answer}")
-            return answer
-
-        # Проверяем команды
         result, handled = self.router.route(text)
+
         if handled:
-            logger.info(f"BRO: {result}")
             return result
 
-        # Передаём в ИИ
-        answer = self.ai.ask(text)
+        response = self.ai.ask(text)
 
-        logger.info(f"BRO: {answer}")
+        answer = response["answer"]
+        facts = response["memory"]
+
+        for fact in facts:
+            self.memory.add(fact)
+
+        logger.info(f"ASSISTANT: {answer}")
 
         return answer
