@@ -1,17 +1,17 @@
 import os
 
-from modules.files.indexer import FileIndexer
+from modules.programs.indexer import Indexer
 
 
-class Files:
+class Launcher:
 
     def __init__(self):
-        self.indexer = FileIndexer()
+        self.indexer = Indexer()
         self.indexer.scan()
 
     def handle(self, command: dict):
 
-        if command.get("tool") != "files":
+        if command.get("tool") != "programs":
             return None
 
         if command.get("action") != "open":
@@ -22,13 +22,13 @@ class Files:
         if not value:
             return None
 
-        path = self.indexer.search(value)
+        program = self.indexer.search(value)
 
-        if path is None:
+        if program is None:
             return None
 
         try:
-            os.startfile(path)
-            return f"Открываю {path.name}."
+            os.startfile(program)
+            return f"Открываю {program.stem}."
         except Exception as e:
             return f"Ошибка: {e}"

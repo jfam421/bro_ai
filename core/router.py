@@ -1,23 +1,40 @@
-from modules.launcher.launcher import Launcher
+from modules.programs.programs import Launcher
 from modules.files.files import Files
+from modules.browser.browser import Browser
 
 
 class Router:
-    def __init__(self):
+
+    def __init__(self, ai):
         print(">>> Router initialized")
 
-        self.launcher = Launcher()
+        self.ai = ai
+
+        self.programs = Launcher()
         self.files = Files()
+        self.browser = Browser()
 
     def route(self, text: str):
         print(f">>> Router received: {text}")
 
-        result = self.launcher.open(text)
+        command = self.ai.analyze_command(text)
 
-        if result is not None:
-            return result, True
+        tool = command.get("tool", "chat")
 
-        result = self.files.open(text)
+        if tool == "chat":
+            return None, False
+
+        if tool == "programs":
+            result = self.programs.handle(command)
+
+        elif tool == "files":
+            result = self.files.handle(command)
+
+        elif tool == "browser":
+            result = self.browser.handle(command)
+
+        else:
+            return None, False
 
         if result is not None:
             return result, True

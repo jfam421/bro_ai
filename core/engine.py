@@ -5,9 +5,12 @@ from core.router import Router
 
 
 class Engine:
+
     def __init__(self):
         self.ai = AI()
-        self.router = Router()
+
+        self.router = Router(self.ai)
+
         self.memory = Memory()
 
     def process(self, text: str) -> str:
@@ -16,14 +19,14 @@ class Engine:
         result, handled = self.router.route(text)
 
         if handled:
+            logger.info(f"ASSISTANT: {result}")
             return result
 
         response = self.ai.ask(text)
 
         answer = response["answer"]
-        facts = response["memory"]
 
-        for fact in facts:
+        for fact in response["memory"]:
             self.memory.add(fact)
 
         logger.info(f"ASSISTANT: {answer}")
