@@ -34,25 +34,69 @@ class FileIndexer:
 
     def __init__(self):
         self.files = []
+        self.folders = []
 
     def scan(self):
         self.files.clear()
+        self.folders.clear()
 
         for folder in SEARCH_FOLDERS:
             if not folder.exists():
                 continue
 
             try:
-                for file in folder.rglob("*"):
-                    if file.is_file():
-                        self.files.append(file)
+                for item in folder.rglob("*"):
+                    if item.is_file():
+                        self.files.append(item)
+                    elif item.is_dir():
+                        self.folders.append(item)
             except Exception:
                 pass
 
         print(f"Indexed files: {len(self.files)}")
+        print(f"Indexed folders: {len(self.folders)}")
+
+    def _find(self, text: str, items):
+        stem = Path(text).stem.lower()
+        filename = Path(text).name.lower()
+
+        # Полное имя
+        for item in items:
+            if item.name.lower() == filename:
+                return item
+
+        # Имя без расширения
+        for item in items:
+            if item.stem.lower() == stem:
+                return item
+
+        # Начало имени
+        for item in items:
+            if item.stem.lower().startswith(stem):
+                return item
+
+        # Fuzzy
+        if len(stem) >= 4:
+            names = [item.stem.lower() for item in items]
+
+            result = process.extractOne(
+                stem,
+                names,
+                scorer=fuzz.WRatio,
+                score_cutoff=85,
+            )
+
+            if result:
+                for item in items:
+                    if item.stem.lower() == result[0]:
+                        return item
+
+        return None
 
     def search(self, text: str):
         text = text.lower()
+
+        open_folder = "папку" in text
 
         for word in (
             "открой",
@@ -71,36 +115,12 @@ class FileIndexer:
         if not text:
             return None
 
-        stem = Path(text).stem.lower()
-        filename = Path(text).name.lower()
+        if open_folder:
+            return self._find(text, self.folders)
 
-        # Полное совпадение имени файла
-        for file in self.files:
-            if file.name.lower() == filename:
-                return file
+        result = self._find(text, self.files)
 
-        # Полное совпадение имени без расширения
-        for file in self.files:
-            if file.stem.lower() == stem:
-                return file
+        if result:
+            return result
 
-        # Начало имени
-        for file in self.files:
-            if file.stem.lower().startswith(stem):
-                return file
-
-        # Fuzzy только для длинных запросов
-        if len(stem) >= 4:
-            result = process.extractOne(
-                stem,
-                [f.stem.lower() for f in self.files],
-                scorer=fuzz.WRatio,
-                score_cutoff=85,
-            )
-
-            if result:
-                for file in self.files:
-                    if file.stem.lower() == result[0]:
-                        return file
-
-        return None
+        return self._find(text, self.folders)
