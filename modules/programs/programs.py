@@ -29,6 +29,13 @@ class Launcher:
 
         try:
             os.startfile(program)
-            return f"Открываю {program.stem}."
+
+            if isinstance(program, str):
+                name = value
+            else:
+                name = program.stem
+
+            return f"Открываю {name}."
+
         except Exception as e:
             return f"Ошибка: {e}"
