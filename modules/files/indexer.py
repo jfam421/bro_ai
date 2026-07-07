@@ -10,7 +10,6 @@ def get_known_folder(csidl: int):
     return Path(buf.value)
 
 
-# Стандартные папки Windows
 DESKTOP = get_known_folder(0x0000)
 DOCUMENTS = get_known_folder(0x0005)
 PICTURES = get_known_folder(0x0027)
@@ -19,6 +18,29 @@ VIDEOS = get_known_folder(0x000E)
 DOWNLOADS = Path.home() / "Downloads"
 if not DOWNLOADS.exists():
     DOWNLOADS = Path.home() / "OneDrive" / "Downloads"
+
+
+SPECIAL_FOLDERS = {
+    "downloads": DOWNLOADS,
+    "download": DOWNLOADS,
+    "загрузки": DOWNLOADS,
+
+    "documents": DOCUMENTS,
+    "document": DOCUMENTS,
+    "документы": DOCUMENTS,
+
+    "desktop": DESKTOP,
+    "рабочий стол": DESKTOP,
+
+    "pictures": PICTURES,
+    "picture": PICTURES,
+    "картинки": PICTURES,
+    "изображения": PICTURES,
+
+    "videos": VIDEOS,
+    "video": VIDEOS,
+    "видео": VIDEOS,
+}
 
 
 SEARCH_FOLDERS = [
@@ -70,13 +92,22 @@ class FileIndexer:
             if item.stem.lower() == stem:
                 return item
 
-        # Начало имени
+        # Совпадение по словам
+        query_words = stem.split()
+
         for item in items:
-            if item.stem.lower().startswith(stem):
+            name_words = (
+                item.stem.lower()
+                .replace("_", " ")
+                .replace("-", " ")
+                .split()
+            )
+
+            if all(word in name_words for word in query_words):
                 return item
 
-        # Fuzzy
-        if len(stem) >= 4:
+        # Fuzzy Search
+        if len(stem) >= 3:
             names = [item.stem.lower() for item in items]
 
             result = process.extractOne(
@@ -110,10 +141,13 @@ class FileIndexer:
         ):
             text = text.replace(word, "")
 
-        text = text.strip()
+        text = " ".join(text.split())
 
         if not text:
             return None
+
+        if text in SPECIAL_FOLDERS:
+            return SPECIAL_FOLDERS[text]
 
         if open_folder:
             return self._find(text, self.folders)
