@@ -3,13 +3,15 @@ from pathlib import Path
 
 
 class Database:
+
+    HISTORY_LIMIT = 10
+
     def __init__(self):
         Path("data").mkdir(exist_ok=True)
 
         self.conn = sqlite3.connect("data/bro.db")
         self.cursor = self.conn.cursor()
 
-        # История
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,7 +21,6 @@ class Database:
             )
         """)
 
-        # Старые факты (пока оставляем)
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS facts (
                 key TEXT PRIMARY KEY,
@@ -27,7 +28,6 @@ class Database:
             )
         """)
 
-        # Новая долговременная память
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS memory (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,6 +38,8 @@ class Database:
 
         self.conn.commit()
 
+        self._memory_cache = None
+
     # ==========================================================
     # История
     # ==========================================================
@@ -47,9 +49,28 @@ class Database:
             "INSERT INTO history(role, message) VALUES(?, ?)",
             (role, message)
         )
+
+        # Храним только последние HISTORY_LIMIT сообщений
+        self.cursor.execute(
+            """
+            DELETE FROM history
+            WHERE id NOT IN (
+                SELECT id
+                FROM history
+                ORDER BY id DESC
+                LIMIT ?
+            )
+            """,
+            (self.HISTORY_LIMIT,)
+        )
+
         self.conn.commit()
 
-    def get_history(self, limit=20):
+    def get_history(self, limit=None):
+
+        if limit is None:
+            limit = self.HISTORY_LIMIT
+
         self.cursor.execute(
             """
             SELECT role, message
@@ -63,7 +84,7 @@ class Database:
         return list(reversed(self.cursor.fetchall()))
 
     # ==========================================================
-    # Старые факты (совместимость)
+    # Старые факты
     # ==========================================================
 
     def set_fact(self, key: str, value: str):
@@ -95,10 +116,22 @@ class Database:
         return dict(self.cursor.fetchall())
 
     # ==========================================================
-    # Новая память
+    # Память
     # ==========================================================
 
     def add_memory(self, fact: str):
+
+        fact = fact.strip()
+
+        if not fact:
+            return
+
+        if self._memory_cache is None:
+            self.get_memory()
+
+        if fact in self._memory_cache:
+            return
+
         self.cursor.execute(
             """
             INSERT OR IGNORE INTO memory(fact)
@@ -109,7 +142,13 @@ class Database:
 
         self.conn.commit()
 
+        self._memory_cache.append(fact)
+
     def get_memory(self):
+
+        if self._memory_cache is not None:
+            return self._memory_cache
+
         self.cursor.execute(
             """
             SELECT fact
@@ -118,7 +157,12 @@ class Database:
             """
         )
 
-        return [row[0] for row in self.cursor.fetchall()]
+        self._memory_cache = [
+            row[0]
+            for row in self.cursor.fetchall()
+        ]
+
+        return self._memory_cache
 
     def clear_memory(self):
         self.cursor.execute(
@@ -126,3 +170,5 @@ class Database:
         )
 
         self.conn.commit()
+
+        self._memory_cache = []
